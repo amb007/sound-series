@@ -4,7 +4,8 @@ An exercise in musical notation, used for teaching a six-year-old the basics.
 Two example generated audio files are provided.
 
 Depends on [Common Music
-2.6.0](https://sourceforge.net/projects/commonmusic/files/cm/2.6.0/)
+2.6.0](https://sourceforge.net/projects/commonmusic/files/cm/2.6.0/),
+[Common Lisp Music 4](https://ccrma.stanford.edu/software/clm/)
 and [Series
 2.2.10](http://sourceforge.net/projects/series/files/series/series-2.2.10/).
 
