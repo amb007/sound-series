@@ -1,0 +1,180 @@
+(definstrument pulses (start duration frequency amplitude-envelope)
+  (let* ((start-sample (* start *srate*))
+         (end-sample (+ start-sample (* duration *srate*)))
+         (amp-env (make-env :duration duration
+                            :envelope amplitude-envelope))
+         (pulse (make-pulse-train :frequency frequency)))
+    (run
+     (loop for counter from start-sample to end-sample do
+          (outa counter (* (env amp-env) (pulse-train pulse)))))))
+
+; (with-sound (:srate 44100) (pulses 0 10 220 '(0 0 0.5 1 1 0)))
+
+(definstrument filtered-pulses (start duration pulse-frequency center-frequency q amplitude-envelope)
+  (let* ((start-sample (* start *srate*))
+         (end-sample (+ start-sample (* duration *srate*)))
+         (amp-env (make-env :duration duration
+                            :envelope amplitude-envelope))
+         (pulse (make-pulse-train :frequency pulse-frequency))
+         (resonator (make-formant :frequency center-frequency
+                                  :radius q)))
+    (run
+     (loop for counter from start-sample to end-sample do
+          (outa counter (* (env amp-env) (formant resonator (pulse-train pulse))))))))
+
+; (with-sound (:srate 44100) (filtered-pulses 0 10 220 440 0.8 '(0 0 0.5 1 1 0)))
+
+(definstrument variable-filtered-pulses (start duration pulse-frequency-env center-frequency-env q-env amplitude-env)
+  (let* ((start-sample (* start *srate*))
+         (end-sample (+ start-sample (* duration *srate*)))
+         (pulse-f-env (make-env :envelope pulse-frequency-env
+                                :duration duration
+                                :scaler (hz->radians 1)))
+         (filter-f-env (make-env :envelope center-frequency-env
+                                 :duration duration))
+         (filter-q-env (make-env :envelope q-env
+                                 :duration duration))
+         (amp-env (make-env :envelope amplitude-env
+                            :duration duration))
+         (pulse (make-pulse-train :frequency 0))
+         (resonator (make-formant :frequency 220 :radius 1)))
+    (run
+     (loop for counter from start-sample to end-sample do
+          (setf (mus-frequency resonator) (env filter-f-env)) ; change the resonator center frequency
+          ;(setf (mus-formant-radius resonator) (env filter-q-env)) ; change the resonator radius (q/bandwidth)
+          (outa counter (* (env amp-env)
+                           (formant resonator (pulse-train pulse (env pulse-f-env)))))))))
+
+; (with-sound (:srate 44100) (variable-filtered-pulses 0 10 '(0 110 1 440) '(0 880 1 440) '(0 0.1 1 0.99) '(0 0 0.5 1 1 0)))
+; (with-sound (:srate 44100) (variable-filtered-pulses 0 10 '(0 10 1 5) '(0 880 1 440) '(0 0.99 1 0.99) '(0 0 0.5 50 1 0)))
+
+(definstrument resonator-series (start duration pulse-frequency-env center-frequency-env q-env amplitude-env)
+  ; chaining bandpass filters in series to try to get a more peaky resonance
+  (let* ((start-sample (* start *srate*))
+         (end-sample (+ start-sample (* duration *srate*)))
+         (pulse-f-env (make-env :envelope pulse-frequency-env
+                                :duration duration
+                                :scaler (hz->radians 1)))
+         (filter-f-env (make-env :envelope center-frequency-env
+                                 :duration duration))
+         (filter-q-env (make-env :envelope q-env
+                                 :duration duration))
+         (amp-env (make-env :envelope amplitude-env
+                            :duration duration))
+         (pulse (make-pulse-train :frequency 0))
+         (resonator1 (make-formant :frequency 220 :radius 0.1))
+         (resonator2 (make-formant :frequency 220 :radius 0.1))
+         (resonator3 (make-formant :frequency 220 :radius 0.1))
+         (frequency-placeholder 0.0)
+         (q-placeholder 0.0))
+    (run
+     (loop for counter from start-sample to end-sample do
+          (setf frequency-placeholder (env filter-f-env)) ; only call the envelope function once per sample
+          (setf q-placeholder (env filter-q-env))
+          (setf (mus-frequency resonator1) frequency-placeholder) ; change the resonator center frequency
+          (setf (mus-frequency resonator2) frequency-placeholder)
+          (setf (mus-frequency resonator3) frequency-placeholder)
+          ;(setf (mus-formant-radius resonator1) q-placeholder)
+          ;(setf (mus-formant-radius resonator2) q-placeholder)
+          ;(setf (mus-formant-radius resonator3) q-placeholder)
+          (outa counter (* (env amp-env)
+                           (formant resonator1 
+                                    (formant resonator2
+                                             (formant resonator3 
+                                                      (pulse-train pulse (env pulse-f-env)))))))))))
+
+; (with-sound (:srate 44100 :statistics t) (resonator-series 0 10 '(0 110 1 440) '(0 880 1 300) '(0 0.9 1 0.99) '(0 0 0.5 50 1 0)))
+; (with-sound (:srate 44100 :statistics t) (resonator-series 0 10 '(0 10 1 4) '(0 880 1 300) '(0 0.9 1 0.99) '(0 0 0.5 500 1 0)))
+
+(definstrument more-filtered-pulses (start duration pulse-frequency-env center-frequency-env bandwidth-env amplitude-env)
+  ; using a different kind of filter design; trying again to get a more peaky resonance
+  ; compile and load "butterworth.cl" from the clm-3 distribution before compiling/loading/(with-sounding) this instrument!
+  (let* ((start-sample (* start *srate*))
+         (end-sample (+ start-sample (* duration *srate*)))
+         (pulse-f-env (make-env :envelope pulse-frequency-env
+                                :duration duration
+                                :scaler (hz->radians 1)))
+         (filter-f-env (make-env :envelope center-frequency-env
+                                 :duration duration))
+         (filter-bw-env (make-env :envelope bandwidth-env
+                                 :duration duration))
+         (amp-env (make-env :envelope amplitude-env
+                            :duration duration))
+         (pulse (make-pulse-train :frequency 0))
+         ;(resonator (make-butterbp 220 5))
+) ; where 220 is center frequency and 5 is bandwidth
+    (run
+     (loop for counter from start-sample to end-sample do
+          ;(set-butterbp resonator (env filter-f-env) (env filter-bw-env))
+          #+nil(outa counter (* (env amp-env)
+                           (butterbp resonator (pulse-train pulse (env pulse-f-env)))))))))
+
+; (with-sound (:srate 44100 :statistics t) (more-filtered-pulses 0 10 '(0 110 1 110) '(0 880 1 220) '(0 5 1 1) '(0 0 0.9 50 1 0)))
+; (with-sound (:srate 44100 :statistics t) (more-filtered-pulses 0 10 '(0 10 1 5) '(0 880 1 220) '(0 5 1 1) '(0 0 0.9 50 1 0)))
+
+(definstrument moog-pulse (start duration pulse-frequency-envelope cutoff-frequency resonance amplitude-envelope)
+  ; discrete translation of the 4-pole analog Moog voltage-controlled (lowpass) filter design
+  ; = warm sound and good times!
+  ; nb must compile and load "moog.lisp" from the clm-3 distribution before compiling/loading/(with-sounding) this instrument!
+  (let* ((start-sample (* start *srate*))
+         (end-sample (+ start-sample (* duration *srate*)))
+         (pulse-env (make-env :envelope pulse-frequency-envelope
+                              :duration duration
+                              :scaler (hz->radians 1)))
+         (amp-env (make-env :envelope amplitude-envelope
+                            :duration duration))
+         (ptrain (make-pulse-train :frequency 0))
+         (moog-lpf (make-moog-filter :frequency cutoff-frequency
+                                     :Q resonance)))
+    (run
+     (loop for counter from start-sample to end-sample do
+          (outa counter (* (env amp-env)
+                           (moog-filter moog-lpf (pulse-train ptrain (env pulse-env)))))))))
+
+; (with-sound (:srate 44100 :statistics t) (moog-pulse 0 10 '(0 110 1 880) 660 0.95 '(0 0 0.9 1 1 0)))
+
+(definstrument filter-sweep (start duration pulse-frequency-envelope cutoff-frequency-envelope resonance-envelope amplitude-envelope)
+  ; as above but with envelope control of Moog filter cutoff frequency and resonance
+  ; nb must compile and load "moog.lisp" from the clm-3 distribution before compiling/loading/(with-sounding) this instrument!
+  (let* ((start-sample (* start *srate*))
+         (end-sample (+ start-sample (* duration *srate*)))
+         (pulse-env (make-env :envelope pulse-frequency-envelope
+                              :duration duration
+                              :scaler (hz->radians 1)))
+         (cutoff-env (make-env :envelope cutoff-frequency-envelope
+                               :duration duration))
+         (q-env (make-env :envelope resonance-envelope
+                          :duration duration))
+         (amp-env (make-env :envelope amplitude-envelope
+                            :duration duration))
+         (ptrain (make-pulse-train :frequency 0))
+         (moog-lpf (make-moog-filter :frequency 440
+                                     :Q 0.9)))
+    (run
+     (loop for counter from start-sample to end-sample do
+          (setf (moog-frequency moog-lpf) (env cutoff-env))
+          (setf (moog-Q moog-lpf) (env q-env))
+          (outa counter (* (env amp-env)
+                           (moog-filter moog-lpf (pulse-train ptrain (env pulse-env)))))))))
+
+; (with-sound (:srate 44100 :statistics t) (filter-sweep 0 10 '(0 220 1 220) '(0 1000 1 150) '(0 0.95 1 0.99) '(0 0 0.9 1 1 0)))
+
+(definstrument night-traffic (start duration soundfile comb-frequency-envelope comb-resonance-envelope amplitude-envelope)
+  (let* ((start-sample (* start *srate*))
+         (end-sample (+ start-sample (* duration *srate*)))
+         (wavetable (make-src :input soundfile :srate 1.0))
+         (comb-filter (make-comb :size (/ *srate* 110) :scaler 0.8 :max-size *srate*))
+         (freq-env (make-env :envelope comb-frequency-envelope
+                             :duration duration))
+         (res-env (make-env :envelope comb-resonance-envelope
+                            :duration duration))
+         (amp-env (make-env :envelope amplitude-envelope
+                            :duration duration)))
+    (run
+     (loop for counter form start-sample to end-sample do
+          (setf (mus-feedback comb-filter) (env res-env))
+          (outa counter (* (env amp-env)
+                           (comb comb-filter (src wavetable) (/ *srate* (env freq-env)))))))))
+
+; (with-sound (:srate 44100 :statistics t) (night-traffic 0 10 "/Volumes/FILES/music-audio/excerpts/reich-excerpt.wav" '(0 220 1 330) '(0 0.999 1 0.999) '(0 0 0.9 0.3 1 0)))
+          
