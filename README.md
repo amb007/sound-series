@@ -9,6 +9,9 @@ Depends on [Common Music
 and [Series
 2.2.10](http://sourceforge.net/projects/series/files/series/series-2.2.10/).
 
+To run, set up the dependences in ASDF and then `(load "scratch")`
+(tested with SBCL).
+
 Emacs add-ons:
 
 ```
