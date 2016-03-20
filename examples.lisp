@@ -63,7 +63,7 @@
 	  (c3 (map-fn 'time-sound #'skew-2 c1)))
       (gen-sound maxtb 1 c1 c2 c3 m1 d1 e1))))
 
-;;;; Café de flore
+;;;; Café de Flore
 
 (defparameter *cafe-1*
   '((6 0) (1 -1) (1 -3)
