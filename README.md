@@ -1,5 +1,7 @@
 ## sound-series
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/amb007/sound-series)
+
 An exercise in musical notation, used for teaching a six-year-old the basics.
 Two example generated audio files are provided.
 
